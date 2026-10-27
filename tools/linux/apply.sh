@@ -40,4 +40,13 @@ if [ -n "$leftover" ]; then
 fi
 
 ls "$folder" | grep -E 'linux_x86_64\.whl$' | grep -vE 'manylinux' && { echo "still distro-specific wheels in $folder" >&2; exit 1; }
+
+# Ubuntu 20.04's python3.8 venvs come with pip 20.0.2, which predates the manylinux_2_X tag format
+# (pip 20.3) and rejects a wheel carrying only that tag. Those branches need a manylinux1/2010/2014 tag.
+case $folder in
+	*-py3.8-linux)
+		ls "$folder" | grep -E 'manylinux_2_[0-9]+' | grep -vE 'manylinux(1|2010|2014)_' \
+			&& { echo "wheels above need a manylinux2014 (or older) tag for pip 20.0.2 in $folder" >&2; exit 1; }
+		;;
+esac
 true

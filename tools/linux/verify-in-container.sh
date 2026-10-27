@@ -7,7 +7,12 @@ python=$1
 "python$python" -m venv /venv
 cd /wheels
 files=$(ls *.whl | awk -F- '{ name = tolower($1); gsub(/[-_.]+/, "-", name); last[name] = $0 } END { for (n in last) print "/wheels/" last[n] }')
-/venv/bin/pip install -q --no-index --find-links /wheels $files 2>&1 | grep -v -e 'new release of pip' -e 'pip install --upgrade pip' || true
+# A failed install must fail the check: an empty venv would otherwise "pass" the import test below.
+if ! /venv/bin/pip install -q --no-index --find-links /wheels $files >/tmp/pip.log 2>&1; then
+	grep -v -e 'new release of pip' -e 'pip install --upgrade pip' /tmp/pip.log | tail -5
+	echo "pip install failed"
+	exit 1
+fi
 /venv/bin/pip check >/dev/null || /venv/bin/pip check | head -5
 
 /venv/bin/python - <<'EOF'
